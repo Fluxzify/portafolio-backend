@@ -8,6 +8,10 @@ import org.springframework.stereotype.Service;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import java.util.Optional;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Service
 public class PublicacionServiceImpl implements PublicacionService {
@@ -46,8 +50,24 @@ public class PublicacionServiceImpl implements PublicacionService {
         return publicacionRepository.save(publicacion);
     }
 
+
     @Override
     public void eliminarPublicacion(Long id) {
-        publicacionRepository.deleteById(id);
+        Publicacion publicacion = publicacionRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Publicación no encontrada"));
+
+        // Eliminar imagen asociada
+        String nombreArchivo = publicacion.getUrlFoto(); // Aquí asumes que es solo el nombre, no una URL completa
+        if (nombreArchivo != null && !nombreArchivo.isBlank()) {
+            Path ruta = Paths.get("uploads/" + nombreArchivo);
+            try {
+                Files.deleteIfExists(ruta);
+            } catch (IOException e) {
+                System.err.println("⚠️ No se pudo eliminar la imagen: " + nombreArchivo);
+            }
+        }
+
+        // Eliminar la publicación de la base de datos
+        publicacionRepository.delete(publicacion);
     }
 }
