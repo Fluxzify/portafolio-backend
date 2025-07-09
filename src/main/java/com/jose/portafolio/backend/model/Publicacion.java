@@ -16,7 +16,9 @@ public class Publicacion {
 
     private String titulo;
 
-    private String urlFoto;
+    @ManyToOne
+    @JoinColumn(name = "foto_id")
+    private Foto foto;
 
     @ManyToOne
     @JoinColumn(name = "categoria_id")

@@ -21,5 +21,8 @@ public class CorsConfig {
                         .allowCredentials(true); // Permite enviar cookies, tokens, etc.
             }
         };
+
     }
+
+
 }

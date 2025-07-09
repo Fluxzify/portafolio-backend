@@ -42,32 +42,36 @@ public class PublicacionServiceImpl implements PublicacionService {
         Publicacion publicacion = publicacionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Publicación no encontrada"));
 
-        publicacion.setUrlFoto(publicacionActualizada.getUrlFoto());
-        publicacion.setCategoria(publicacionActualizada.getCategoria());
         publicacion.setTitulo(publicacionActualizada.getTitulo());
-
+        publicacion.setCategoria(publicacionActualizada.getCategoria());
+        publicacion.setFoto(publicacionActualizada.getFoto()); // ahora es entidad
 
         return publicacionRepository.save(publicacion);
     }
-
 
     @Override
     public void eliminarPublicacion(Long id) {
         Publicacion publicacion = publicacionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Publicación no encontrada"));
 
-        // Eliminar imagen asociada
-        String nombreArchivo = publicacion.getUrlFoto(); // Aquí asumes que es solo el nombre, no una URL completa
-        if (nombreArchivo != null && !nombreArchivo.isBlank()) {
-            Path ruta = Paths.get("uploads/" + nombreArchivo);
-            try {
-                Files.deleteIfExists(ruta);
-            } catch (IOException e) {
-                System.err.println("⚠️ No se pudo eliminar la imagen: " + nombreArchivo);
+
+        if (publicacion.getFoto() != null) {
+            String nombreArchivo = publicacion.getFoto().getNombreArchivo();
+            if (nombreArchivo != null && !nombreArchivo.isBlank()) {
+                Path ruta = Paths.get("uploads/" + nombreArchivo);
+                try {
+                    Files.deleteIfExists(ruta);
+                } catch (IOException e) {
+                    System.err.println("⚠️ No se pudo eliminar la imagen física: " + nombreArchivo);
+                }
             }
         }
 
-        // Eliminar la publicación de la base de datos
         publicacionRepository.delete(publicacion);
+    }
+
+    @Override
+    public List<Publicacion> buscarPorCategoria(String nombreCategoria) {
+        return publicacionRepository.findByCategoriaNombre(nombreCategoria);
     }
 }

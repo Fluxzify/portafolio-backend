@@ -15,4 +15,6 @@ public interface PublicacionService {
     Publicacion actualizarPublicacion(Long id, Publicacion publicacionActualizada);
 
     void eliminarPublicacion(Long id);
+    List<Publicacion> buscarPorCategoria(String nombreCategoria);
+
 }
