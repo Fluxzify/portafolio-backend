@@ -25,20 +25,45 @@ public class FotoServiceImpl implements FotoService {
 
     @Override
     public Foto guardarFoto(MultipartFile file, String titulo) throws IOException {
-        String nombreArchivo = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-        Path ruta = Paths.get("uploads/" + nombreArchivo);
+        // Validar tipo MIME
+        String tipo = file.getContentType();
+        if (tipo == null || !List.of("image/jpeg", "image/png", "image/webp").contains(tipo)) {
+            throw new IllegalArgumentException("Tipo de archivo no permitido: " + tipo);
+        }
+
+        // Obtener extensión segura
+        String extension = Optional.ofNullable(file.getOriginalFilename())
+                .map(nombre -> nombre.substring(nombre.lastIndexOf('.') + 1))
+                .orElse("");
+
+        // Validar extensión
+        if (!List.of("jpg", "jpeg", "png", "webp").contains(extension.toLowerCase())) {
+            throw new IllegalArgumentException("Extensión de archivo no permitida: " + extension);
+        }
+
+        // Generar nombre único seguro (UUID)
+        String nombreArchivoSeguro = java.util.UUID.randomUUID().toString() + "." + extension;
 
         // Crear carpeta si no existe
-        Files.createDirectories(ruta.getParent());
+        Path carpetaUploads = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
+        Files.createDirectories(carpetaUploads);
+
+        // Ruta segura
+        Path rutaDestino = carpetaUploads.resolve(nombreArchivoSeguro).normalize();
+
+        // Evitar path traversal
+        if (!rutaDestino.startsWith(carpetaUploads)) {
+            throw new SecurityException("Ruta inválida detectada");
+        }
 
         // Guardar archivo
-        Files.write(ruta, file.getBytes());
+        Files.write(rutaDestino, file.getBytes());
 
         // Crear objeto Foto y guardar en base de datos
         Foto foto = Foto.builder()
                 .titulo(titulo)
-                .nombreArchivo(nombreArchivo)
-                .url("/uploads/" + nombreArchivo)
+                .nombreArchivo(nombreArchivoSeguro)
+                .url("/uploads/" + nombreArchivoSeguro)
                 .build();
 
         return fotoRepository.save(foto);

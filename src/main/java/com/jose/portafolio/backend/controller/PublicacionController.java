@@ -9,10 +9,13 @@ import com.jose.portafolio.backend.service.CategoriaService;
 import com.jose.portafolio.backend.service.FotoService;
 import com.jose.portafolio.backend.service.PublicacionService;
 import com.jose.portafolio.backend.service.UsuarioService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -35,7 +38,6 @@ public class PublicacionController {
         this.fotoService = fotoService;
     }
 
-    // GET /api/publicaciones
     @GetMapping
     public ResponseEntity<List<PublicacionDto>> listarPublicaciones() {
         List<PublicacionDto> publicaciones = publicacionService.listarPublicaciones()
@@ -45,43 +47,61 @@ public class PublicacionController {
         return ResponseEntity.ok(publicaciones);
     }
 
-    // GET /api/publicaciones/{id}
     @GetMapping("/{id}")
     public ResponseEntity<PublicacionDto> obtenerPublicacionPorId(@PathVariable Long id) {
-        Optional<Publicacion> publicacion = publicacionService.obtenerPublicacionPorId(id);
-        return publicacion.map(p -> ResponseEntity.ok(convertirADto(p)))
-                .orElse(ResponseEntity.notFound().build());
+        Publicacion publicacion = publicacionService.obtenerPublicacionPorId(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Publicación no encontrada"));
+
+        return ResponseEntity.ok(convertirADto(publicacion));
     }
 
-    // POST /api/publicaciones
     @PostMapping
-    public ResponseEntity<PublicacionDto> crearPublicacion(@RequestBody PublicacionDto dto) {
-        Publicacion publicacion = convertirAEntidad(dto);
-        Publicacion guardada = publicacionService.crearPublicacion(publicacion);
-        return ResponseEntity.ok(convertirADto(guardada));
+    public ResponseEntity<?> crearPublicacion(@RequestBody PublicacionDto dto) {
+        try {
+            Publicacion publicacion = convertirAEntidad(dto);
+            Publicacion guardada = publicacionService.crearPublicacion(publicacion);
+            return ResponseEntity.status(201).body(Map.of(
+                    "message", "Publicación creada correctamente",
+                    "data", convertirADto(guardada)
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
-    // PUT /api/publicaciones/{id}
     @PutMapping("/{id}")
-    public ResponseEntity<PublicacionDto> actualizarPublicacion(@PathVariable Long id, @RequestBody PublicacionDto dto) {
-        Publicacion actualizada = publicacionService.actualizarPublicacion(id, convertirAEntidad(dto));
-        return ResponseEntity.ok(convertirADto(actualizada));
+    public ResponseEntity<?> actualizarPublicacion(@PathVariable Long id, @RequestBody PublicacionDto dto) {
+        try {
+            Publicacion actualizada = publicacionService.actualizarPublicacion(id, convertirAEntidad(dto));
+            return ResponseEntity.ok(Map.of(
+                    "message", "Publicación actualizada correctamente",
+                    "data", convertirADto(actualizada)
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
-    // DELETE /api/publicaciones/{id}
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarPublicacion(@PathVariable Long id) {
-        publicacionService.eliminarPublicacion(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> eliminarPublicacion(@PathVariable Long id) {
+        try {
+            publicacionService.eliminarPublicacion(id);
+            return ResponseEntity.ok(Map.of("message", "Publicación eliminada correctamente"));
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(Map.of("error", "No se pudo eliminar: " + e.getMessage()));
+        }
     }
 
-    // GET /api/publicaciones/categoria/{nombre}
     @GetMapping("/categoria/{nombre}")
-    public ResponseEntity<List<Publicacion>> buscarPorCategoria(@PathVariable String nombre) {
-        return ResponseEntity.ok(publicacionService.buscarPorCategoria(nombre));
+    public ResponseEntity<?> buscarPorCategoria(@PathVariable String nombre) {
+        List<Publicacion> publicaciones = publicacionService.buscarPorCategoria(nombre);
+        if (publicaciones.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("message", "No se encontraron publicaciones en esa categoría"));
+        }
+        List<PublicacionDto> dtos = publicaciones.stream().map(this::convertirADto).toList();
+        return ResponseEntity.ok(dtos);
     }
 
-    // 🔁 Conversión Entidad -> DTO
     private PublicacionDto convertirADto(Publicacion publicacion) {
         return PublicacionDto.builder()
                 .id(publicacion.getId())
@@ -95,8 +115,6 @@ public class PublicacionController {
                 .build();
     }
 
-
-    // 🔁 Conversión DTO -> Entidad
     private Publicacion convertirAEntidad(PublicacionDto dto) {
         Categoria categoria = categoriaService.obtenerCategoriaPorId(dto.getCategoriaId())
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
@@ -118,5 +136,4 @@ public class PublicacionController {
                 .foto(foto)
                 .build();
     }
-
 }
