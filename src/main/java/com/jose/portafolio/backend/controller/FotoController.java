@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,6 +32,8 @@ import java.util.Optional;
 @Tag(name = "Uploads", description = "Operaciones para subir archivos")
 public class FotoController {
 
+    @Value("${file.upload-dir}")
+    private String uploadDir;
     private final FotoService fotoService;
 
     @Operation(
@@ -68,7 +71,8 @@ public class FotoController {
     ) {
         try {
             // Carpeta de almacenamiento
-            Path carpetaBase = Paths.get("uploads").toAbsolutePath().normalize();
+            Path carpetaBase = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Files.createDirectories(carpetaBase);  // asegúrate de que exista
             Path rutaArchivo = carpetaBase.resolve(nombreArchivo).normalize();
 
             // Protección contra path traversal
