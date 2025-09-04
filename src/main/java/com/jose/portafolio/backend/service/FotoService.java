@@ -11,5 +11,7 @@ public interface FotoService {
     Foto guardarFoto(MultipartFile archivo, String titulo) throws IOException;
     List<Foto> listarFotos();
     Optional<Foto> obtenerFotoPorId(Long id);
-    void eliminarFoto(Long id);
+    void eliminarFoto(Long id) throws IOException;
+    Foto guardarFotoUrl(String urlArchivo, String titulo) throws IOException;
+
 }

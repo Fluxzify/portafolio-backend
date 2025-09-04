@@ -3,15 +3,12 @@ package com.jose.portafolio.backend.serviceImpl;
 import com.jose.portafolio.backend.model.Foto;
 import com.jose.portafolio.backend.repository.FotoRepository;
 import com.jose.portafolio.backend.service.FotoService;
+import com.jose.portafolio.backend.service.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,8 +17,7 @@ import java.util.Optional;
 public class FotoServiceImpl implements FotoService {
 
     private final FotoRepository fotoRepository;
-
-    private final String UPLOAD_DIR = "uploads/";
+    private final SupabaseStorageService supabaseStorageService; // inyectado
 
     @Override
     public Foto guardarFoto(MultipartFile file, String titulo) throws IOException {
@@ -31,39 +27,22 @@ public class FotoServiceImpl implements FotoService {
             throw new IllegalArgumentException("Tipo de archivo no permitido: " + tipo);
         }
 
-        // Obtener extensión segura
+        // Validar extensión segura
         String extension = Optional.ofNullable(file.getOriginalFilename())
                 .map(nombre -> nombre.substring(nombre.lastIndexOf('.') + 1))
                 .orElse("");
-
-        // Validar extensión
         if (!List.of("jpg", "jpeg", "png", "webp").contains(extension.toLowerCase())) {
             throw new IllegalArgumentException("Extensión de archivo no permitida: " + extension);
         }
 
-        // Generar nombre único seguro (UUID)
-        String nombreArchivoSeguro = java.util.UUID.randomUUID().toString() + "." + extension;
-
-        // Crear carpeta si no existe
-        Path carpetaUploads = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
-        Files.createDirectories(carpetaUploads);
-
-        // Ruta segura
-        Path rutaDestino = carpetaUploads.resolve(nombreArchivoSeguro).normalize();
-
-        // Evitar path traversal
-        if (!rutaDestino.startsWith(carpetaUploads)) {
-            throw new SecurityException("Ruta inválida detectada");
-        }
-
-        // Guardar archivo
-        Files.write(rutaDestino, file.getBytes());
+        // Subir archivo a Supabase y obtener la URL pública
+        String urlArchivo = supabaseStorageService.uploadFile(file);
 
         // Crear objeto Foto y guardar en base de datos
         Foto foto = Foto.builder()
                 .titulo(titulo)
-                .nombreArchivo(nombreArchivoSeguro)
-                .url("/uploads/" + nombreArchivoSeguro)
+                .nombreArchivo(file.getOriginalFilename())
+                .url(urlArchivo) // <-- aquí guardamos la URL del bucket
                 .build();
 
         return fotoRepository.save(foto);
@@ -80,7 +59,25 @@ public class FotoServiceImpl implements FotoService {
     }
 
     @Override
-    public void eliminarFoto(Long id) {
-        fotoRepository.deleteById(id);
+    public void eliminarFoto(Long id) throws IOException {
+        Optional<Foto> optFoto = fotoRepository.findById(id);
+        if (optFoto.isPresent()) {
+            Foto foto = optFoto.get();
+            // Eliminar archivo de Supabase
+            supabaseStorageService.deleteFile(foto.getNombreArchivo());
+            // Eliminar registro de la base de datos
+            fotoRepository.deleteById(id);
+        }
+    }
+    @Override
+    public Foto guardarFotoUrl(String urlArchivo, String titulo) throws IOException {
+        // Guardamos directamente la URL en la base de datos
+        Foto foto = Foto.builder()
+                .titulo(titulo)
+                .nombreArchivo(urlArchivo.substring(urlArchivo.lastIndexOf('/') + 1)) // extrae el nombre
+                .url(urlArchivo)
+                .build();
+
+        return fotoRepository.save(foto);
     }
 }
