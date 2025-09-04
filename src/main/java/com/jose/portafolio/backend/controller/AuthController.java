@@ -47,14 +47,14 @@ public class AuthController {
 
             ResponseCookie cookie = ResponseCookie.from("token", token)
                     .httpOnly(true)
-                    .secure(false) // solo test
+                    .secure(true) // true en producción (https)
                     .path("/")
-                    .maxAge(24*60*60)
-                    .sameSite("Lax") // temporal
+                    .maxAge(24 * 60 * 60)
+                    .sameSite("None")
                     .build();
 
             response.addHeader("Set-Cookie", cookie.toString());
-            System.out.println(cookie);
+
             return ResponseEntity.ok(Map.of("message", "Login exitoso"));
         } catch (org.springframework.security.core.AuthenticationException ex) {
             // Aquí capturamos la excepción de credenciales inválidas
