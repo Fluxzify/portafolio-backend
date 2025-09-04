@@ -68,7 +68,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://192.168.56.1:3000", "https://nek0ch4n.netlify.app/")); // o el dominio donde está tu frontend
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://192.168.56.1:3000", "https://nek0ch4n.netlify.app")); // o el dominio donde está tu frontend
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true); // para cookies o tokens en headers
