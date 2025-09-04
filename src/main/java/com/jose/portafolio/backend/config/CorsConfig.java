@@ -15,7 +15,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**") // Aplica para todas las rutas
-                        .allowedOrigins("http://localhost:3000") // Origen frontend que quieres permitir (puedes agregar más)
+                        .allowedOrigins("http://localhost:3000", "https://nek0ch4n.netlify.app") // Origen frontend que quieres permitir (puedes agregar más)
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Métodos HTTP permitidos
                         .allowedHeaders("*") // Permite cualquier header
                         .allowCredentials(true); // Permite enviar cookies, tokens, etc.
